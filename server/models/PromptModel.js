@@ -34,7 +34,7 @@ const PromptSchema = new mongoose.Schema(
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Prompt = mongoose.model("Prompt", PromptSchema);

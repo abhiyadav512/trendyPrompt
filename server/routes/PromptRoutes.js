@@ -18,7 +18,7 @@ routes.post(
   verifytoken,
   requireRole(["admin"]),
   validate(addPromptType),
-  addPrompt
+  addPrompt,
 );
 routes.get("/all", getPrompts);
 routes.get("/:category", getByCategory);
@@ -27,7 +27,7 @@ routes.patch(
   verifytoken,
   requireRole(["admin"]),
   validate(updatePromptType),
-  updatePrompt
+  updatePrompt,
 );
 routes.delete("/:id", verifytoken, requireRole(["admin"]), deletePrompt);
 

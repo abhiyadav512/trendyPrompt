@@ -51,16 +51,20 @@ const signinController = async (req, res) => {
 
     const isPasswordValid = await bcrypt.compare(
       password,
-      existingUser.password
+      existingUser.password,
     );
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid password" });
     }
 
     const token = jwt.sign(
-      { id: existingUser._id, email: existingUser.email ,role:existingUser.role },
+      {
+        id: existingUser._id,
+        email: existingUser.email,
+        role: existingUser.role,
+      },
       process.env.JWT_SECRET,
-      { expiresIn: "30d" }
+      { expiresIn: "30d" },
     );
 
     res.status(200).json({
@@ -69,7 +73,7 @@ const signinController = async (req, res) => {
       user: {
         id: existingUser._id,
         email: existingUser.email,
-        name: existingUser.name
+        name: existingUser.name,
       },
     });
   } catch (error) {

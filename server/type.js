@@ -29,7 +29,7 @@ const addPromptType = zod.object({
     {
       required_error: "Category is required",
       invalid_type_error: "Invalid category selected",
-    }
+    },
   ),
   promptText: zod.string().min(1, "Prompt text is required"),
   imgUrl: zod.string().url("Invalid URL for image"),
@@ -55,7 +55,7 @@ const updatePromptType = zod.object({
       {
         required_error: "Category is required",
         invalid_type_error: "Invalid category selected",
-      }
+      },
     )
     .optional(),
   imgUrl: zod.string().url("Invalid URL for image").optional(),

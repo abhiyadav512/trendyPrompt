@@ -54,12 +54,7 @@ const Prompts = () => {
         <button
           key={i}
           onClick={() => handlePageChange(i)}
-          className={`w-10 h-10 flex items-center justify-center rounded-full transition-all 
-                        ${
-                          page === i
-                            ? "bg-black text-white"
-                            : "bg-white text-black hover:bg-gray-100 dark:bg-white dark:text-black dark:hover:bg-gray-200"
-                        }`}
+          className={`w-10 h-10 flex items-center justify-center rounded-full ${page === i ? "bg-black text-white dark:bg-white dark:text-black" : "hover:bg-black hover:text-white dark:hover:text-gray-950 dark:hover:bg-gray-100"}`}
         >
           {i}
         </button>,

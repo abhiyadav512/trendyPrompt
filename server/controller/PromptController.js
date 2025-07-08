@@ -117,19 +117,16 @@ const getByCategory = async (req, res) => {
       return res.status(400).json({ message: "Category is required" });
     }
 
-    const query = { category };
+    const query = {
+      category: { $regex: new RegExp(`^${category.trim()}$`, "i") },
+    };
+
     const total = await Prompt.countDocuments(query);
 
     const prompts = await Prompt.find(query)
       .skip((page - 1) * limit)
       .limit(limit)
       .sort({ createdAt: -1 });
-
-    if (!prompts.length) {
-      return res
-        .status(201)
-        .json({ message: "No prompts found for this category" });
-    }
 
     res.status(200).json({
       data: prompts,
@@ -138,10 +135,10 @@ const getByCategory = async (req, res) => {
       totalPages: Math.ceil(total / limit),
     });
   } catch (error) {
-    // console.error("Get Prompts by Category error:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 module.exports = {
   addPrompt,

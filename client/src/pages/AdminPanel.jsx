@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
-  Plus,
   Edit,
   Trash2,
   Search,
@@ -22,10 +21,11 @@ import PromptCardSkeleton from "../components/ui/PromptCardSkeleton";
 
 import {
   useAddPrompt,
-  useAllPrompt,
   useDeletePrompt,
   useUpdatePrompt,
 } from "../hooks/usePrompt";
+import { useQuery } from "@tanstack/react-query";
+import { getAllPrompt, getCategoryPrompt } from "../api/promptApi";
 
 export default function AdminPanel() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -58,8 +58,19 @@ export default function AdminPanel() {
   const [page, setPage] = useState(pageFromUrl);
   const limit = 10;
 
-  const { data, isLoading, isError } = useAllPrompt({ page, limit });
-  const prompts = data?.data || [];
+  const queryFn = selectedCategory === "all"
+    ? () => getAllPrompt({ page, limit })
+    : () => getCategoryPrompt({ category: selectedCategory, page, limit });
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['prompts', selectedCategory, page],
+    queryFn,
+    keepPreviousData: true,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+  });
+  
+  const prompts = useMemo(() => data?.data || [], [data]);
   const Totalprompts = data?.total || [];
   const totalPages = data?.totalPages || 1;
 
@@ -79,8 +90,11 @@ export default function AdminPanel() {
       );
     }
     if (selectedCategory !== "all") {
-      filtered = filtered.filter((p) => p.category === selectedCategory);
+      filtered = filtered.filter(
+        (p) => p.category?.toLowerCase() === selectedCategory.toLowerCase()
+      );
     }
+    // console.log("Filtered Prompts for category", selectedCategory, filtered);
     setFilteredPrompts(filtered);
   }, [searchTerm, selectedCategory, prompts]);
 
@@ -176,7 +190,7 @@ export default function AdminPanel() {
         <button
           key={i}
           onClick={() => handlePageChange(i)}
-          className={`w-10 h-10 flex items-center justify-center rounded-full ${page === i ? "bg-black text-white" : "bg-white text-black dark:bg-white dark:text-black hover:bg-gray-100"}`}
+          className={`w-10 h-10 flex items-center justify-center rounded-full ${page === i ? "bg-black text-white dark:bg-white dark:text-black" : "hover:bg-black hover:text-white dark:hover:text-gray-950 dark:hover:bg-gray-100"}`}
         >
           {i}
         </button>,
@@ -246,7 +260,7 @@ export default function AdminPanel() {
             >
               <option value="all">All Categories</option>
               {categories.map((cat) => (
-                <option key={cat} value={cat}>
+                <option key={cat} value={cat} className="text-black ">
                   {cat}
                 </option>
               ))}
@@ -261,73 +275,75 @@ export default function AdminPanel() {
               <PromptCardSkeleton key={i} />
             ))
           ) : isError ? (
-            <p className="text-red-500">
+            <p className="text-red-500 text-center">
               Failed to load prompts. Try again later.
             </p>
-          ) : (
-            filteredPrompts.map((prompt) => (
-              <div
-                key={prompt._id}
-                className="bg-white/5 dark:bg-white/10 border dark:border-white/20 rounded-xl overflow-hidden transition-all hover:scale-105 duration-300"
-              >
-                <div className="relative w-full aspect-[16/9] overflow-hidden rounded-t-xl">
-                  <div
-                    className="absolute inset-0 bg-center bg-cover blur-sm scale-105 z-0"
-                    style={{ backgroundImage: `url(${prompt.imgUrl})` }}
-                  />
+          ) : !isError && !isLoading && filteredPrompts.length === 0 ? (
+            <p className="text-center ">No prompts found for this category.</p>
+          )
+            : (
+              filteredPrompts.map((prompt) => (
+                <div
+                  key={prompt._id}
+                  className="bg-white/5 dark:bg-white/10 border dark:border-white/20 rounded-xl overflow-hidden transition-all hover:scale-105 duration-300"
+                >
+                  <div className="relative w-full aspect-[16/9] overflow-hidden rounded-t-xl">
+                    <div
+                      className="absolute inset-0 bg-center bg-cover blur-sm scale-105 z-0"
+                      style={{ backgroundImage: `url(${prompt.imgUrl})` }}
+                    />
+                    <img
+                      src={prompt.imgUrl}
+                      alt={prompt.title}
+                      className="w-full h-full object-contain relative z-10 transition-transform duration-500 hover:scale-105"
+                      loading="lazy"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "/fallback-image.jpg";
+                      }}
+                    />
 
-                  <img
-                    src={prompt.imgUrl}
-                    alt={prompt.title}
-                    className="w-full h-full object-contain relative z-10 transition-transform duration-500 hover:scale-105"
-                    loading="lazy"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = "/fallback-image.jpg";
-                    }}
-                  />
+                    <div className="absolute top-2 right-2 z-20 bg-black/50 backdrop-blur-sm rounded-md px-2 py-1 text-xs font-medium text-white capitalize">
+                      {prompt.category?.replace(/-/g, " ")}
+                    </div>
+                  </div>
 
-                  <div className="absolute top-2 right-2 z-20 bg-black/50 backdrop-blur-sm rounded-md px-2 py-1 text-xs font-medium text-white capitalize">
-                    {prompt.category?.replace(/-/g, " ")}
+                  <div className="p-6">
+                    <h3 className="text-lg font-semibold text-black dark:text-white mb-2 line-clamp-2">
+                      {prompt.title}
+                    </h3>
+                    <p className="text-gray-700 dark:text-gray-300 text-sm mb-4 line-clamp-3">
+                      {prompt.description}
+                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => openModal("view", prompt)}
+                        className="flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-transparent text-black dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition"
+                      >
+                        <Eye className="w-4 h-4" />
+                        View
+                      </button>
+
+                      <button
+                        onClick={() => openModal("edit", prompt)}
+                        className="flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-transparent text-black dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition"
+                      >
+                        <Edit className="w-4 h-4" />
+                        Edit
+                      </button>
+
+                      <button
+                        onClick={() => handleDelete(prompt._id)}
+                        className="flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-transparent text-black dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
-
-                <div className="p-6">
-                  <h3 className="text-lg font-semibold text-black dark:text-white mb-2 line-clamp-2">
-                    {prompt.title}
-                  </h3>
-                  <p className="text-gray-700 dark:text-gray-300 text-sm mb-4 line-clamp-3">
-                    {prompt.description}
-                  </p>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <button
-                      onClick={() => openModal("view", prompt)}
-                      className="flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-transparent text-black dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition"
-                    >
-                      <Eye className="w-4 h-4" />
-                      View
-                    </button>
-
-                    <button
-                      onClick={() => openModal("edit", prompt)}
-                      className="flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-transparent text-black dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition"
-                    >
-                      <Edit className="w-4 h-4" />
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={() => handleDelete(prompt._id)}
-                      className="flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-transparent text-black dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
+              ))
+            )}
         </div>
 
         {/* Pagination */}
